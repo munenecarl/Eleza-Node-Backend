@@ -1,3 +1,4 @@
+require('dotenv').config();
 import { createServer } from 'node:http';
 import express from 'express';
 import { fileURLToPath } from 'node:url';
