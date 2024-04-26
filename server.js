@@ -101,13 +101,13 @@ app.post('/logout', async (req, res) => {
 const authenticateWebSocket = (socket, next) => {
   if (socket.handshake.query && socket.handshake.query.token) {
     jwt.verify(socket.handshake.query.token, process.env.ACCESS_TOKEN_SECRET, (err, decoded) => {
-      if (err) {
-        console.error('WebSocket authentication error:', err);
-        return next(new Error('Authentication error'));
-      }
-      socket.decoded = decoded;
-      next();
-    });
+  if (err) {
+    console.error('WebSocket authentication error:', err);
+    return next(new Error('Authentication error: ' + err.message));
+  }
+  socket.decoded = decoded;
+  next();
+});
   } else {
     next(new Error('Authentication token not provided'));
   }
