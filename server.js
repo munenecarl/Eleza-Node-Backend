@@ -51,29 +51,23 @@ const hashPassword = async (password) => {
 };
 
 app.post('/signup', async (req, res) => {
+  const { username, password } = req.body;
+  const hashedPassword = await bcrypt.hash(password, 10);
+
   try {
-    const { username, password } = req.body;
-
-    // Validate and sanitize user input
-    if (!username || !password) {
-      return res.status(400).send('Invalid input');
-    }
-
-    const hashedPassword = await hashPassword(password);
-
     const stmt = db.prepare('INSERT INTO users (username, password) VALUES (?, ?)');
     const result = stmt.run(username, hashedPassword);
-
-    if (result.changes === 0) {
-      return res.status(400).send('Username already taken');
-    }
 
     const user = db.prepare('SELECT * FROM users WHERE id = ?').get(result.lastInsertRowid);
     const token = jwt.sign({ id: user.id }, process.env.ACCESS_TOKEN_SECRET);
     res.status(201).send({ token });
   } catch (error) {
     console.error('Error in /signup route:', error);
-    res.status(500).send('Server error');
+    if (error.code === 'SQLITE_CONSTRAINT_UNIQUE') {
+      res.status(400).send('Username already taken');
+    } else {
+      res.status(500).send('Server error');
+    }
   }
 });
 
@@ -95,6 +89,10 @@ app.post('/login', async (req, res) => {
 
   const token = jwt.sign({ id: user.id }, process.env.ACCESS_TOKEN_SECRET);
   res.status(201).send({ token });
+});
+
+app.post('/logout', async (req, res) => {
+  res.status(200).send('Logged out successfully')
 });
 
 // middleware function to authenticate WebSocket connections
@@ -120,9 +118,10 @@ io.on('connection', async (socket) => {
   console.log('User connected:', socket.decoded);
 
   socket.on('chat message', async (data) => {
-  const message = data[0];
-  const clientOffset = data[1];
-  const username = data[2];
+  const message = data.message;
+  const clientOffset = data.clientOffset;
+  const username = data.username;
+  console.log('here is the username sent from the client', username, ' the message from the clienr ', message, ' and the clientOffset is ', clientOffset);
 
   try {
     // Prepare the SQL statement
@@ -137,7 +136,8 @@ io.on('connection', async (socket) => {
       console.log('Inserted message with ID:', lastInsertedId);
 
       // Include the offset with the message
-      io.emit('chat message', message, lastInsertedId);
+      io.emit('chat message', { 'message': message, 'lastInsertedId': lastInsertedId, 'username': username });
+      console.log('here is the message sent to the user ', message, 'its lastInsertedId ', lastInsertedId, 'and username', username);
     } else {
       // Message insertion failed
       console.error('Error inserting message:', message, 'Client offset:', clientOffset, 'username:', username);
