@@ -1,4 +1,4 @@
-require('dotenv').config();
+dotenv.config();
 import { createServer } from 'node:http';
 import express from 'express';
 import { fileURLToPath } from 'node:url';
@@ -7,6 +7,7 @@ import { Server } from 'socket.io';
 import sqlite3 from 'better-sqlite3';
 import jwt from 'jsonwebtoken';
 import bcrypt from 'bcrypt';
+import dotenv from 'dotenv';
 
 // Open the database file
 const db = new sqlite3('chat.db');
